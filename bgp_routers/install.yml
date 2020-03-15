@@ -1,0 +1,24 @@
+# Ubuntu Linux を初期インストールする
+
+- name: run
+  hosts: running_servers
+  become: true
+  
+  vars_files:
+    - ../secrets/secrets.yml
+    - ../IPA-DN-CommonAnsible_Private/private_common_vars.yml
+
+  pre_tasks:
+    - include_tasks: "pre_tasks/hdd_partition/{{ hdd_partition_type | default('none', True) }}.yml"
+
+  roles:
+    - role: ../IPA-DN-CommonAnsible/roles/common_linux/
+      when: (skip_common_linux | default(false)) == false
+
+  post_tasks:
+    - include_tasks: "post_tasks/run_additional_tasks/run_additional_tasks.yml"
+    - include_tasks: "{% if run_host_specific_tasks | default(false) %}hosts/host_vars/{{ inventory_hostname }}_tasks.yml{% else %}../IPA-DN-CommonAnsible/tasks/none.yml{% endif %}"
+
+
+
+

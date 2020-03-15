@@ -1,0 +1,76 @@
+eth_settings: |
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:16:00:01", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:16:00:02", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
+ip_settings: |
+  auto lo
+  iface lo inet loopback
+  auto ethmgmt
+  iface ethmgmt inet static
+    address 10.21.33.1/16
+    pre-up echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 || true
+ip_settings_prepare_tmp: |
+  {{ ip_settings }}
+lxd_bridge_ageing_time: 30000  # On VMware ESXi, set 0. Else, set 30000.
+network_boottime_1: |
+  nic_disable_offload ethmgmt
+  nic_disable_offload ethvlan
+network_boottime_2: |
+  #### pyhsical nic
+  sysctl -w net.ipv4.conf.all.send_redirects=0
+  sysctl -w net.ipv4.conf.default.send_redirects=0
+
+  # Create VLAN subinterfaces
+  ip link set ethvlan up
+  sysctl -w net.ipv6.conf.ethvlan.disable_ipv6=1
+
+  ip link add link ethvlan name vlan_ebgp type vlan protoco 802.1Q id 2917
+  ip link set vlan_ebgp up
+  sysctl -w net.ipv4.conf.vlan_ebgp.send_redirects=0
+  sysctl -w net.ipv4.conf.vlan_ebgp.accept_redirects=0
+  ip -4 address add 103.41.60.171/27 broadcast + dev vlan_ebgp
+  ip -6 address add 2401:af80:2917::b/64 dev vlan_ebgp
+
+  ip link add link ethvlan name vlan_ibgp type vlan protoco 802.1Q id 2021
+  ip link set vlan_ibgp up
+  sysctl -w net.ipv4.conf.vlan_ibgp.send_redirects=0
+  sysctl -w net.ipv4.conf.vlan_ibgp.accept_redirects=0
+  ip -4 address add 103.143.136.17/29 broadcast + dev vlan_ibgp
+  ip -6 address add 2405:5340:BB:1::1/64 dev vlan_ibgp
+
+  ip link add link ethvlan name vlan_ospf1 type vlan protoco 802.1Q id 2022
+  ip link set vlan_ospf1 up
+  sysctl -w net.ipv4.conf.vlan_ospf1.send_redirects=0
+  sysctl -w net.ipv4.conf.vlan_ospf1.accept_redirects=0
+  ip -4 address add 103.143.136.25/30 broadcast + dev vlan_ospf1
+  ip -6 address add 2405:5340:BB:2::1/64 dev vlan_ospf1
+network_static_routes: |
+  # none
+network_iptables_rules: |
+  iptables -A INPUT -i ethmgmt -p tcp --syn -m multiport --dports 22,23 -j ACCEPT
+  iptables -A INPUT -p tcp --syn -m multiport --dports 22,23 -j DROP
+  iptables -A INPUT -i ethmgmt -p udp -m multiport --dports 161 -j ACCEPT
+  iptables -A INPUT -p udp -m multiport --dports 161 -j DROP
+
+  ip6tables -A INPUT -i ethmgmt -p tcp --syn -m multiport --dports 22,23 -j ACCEPT
+  ip6tables -A INPUT -p tcp --syn -m multiport --dports 22,23 -j DROP
+  ip6tables -A INPUT -i ethmgmt -p udp -m multiport --dports 161 -j ACCEPT
+  ip6tables -A INPUT -p udp -m multiport --dports 161 -j DROP
+
+enable_ipv4_forward: true
+enable_ipv6_forward: true
+disable_ipv6_all: false
+skip_common_linux: false
+run_host_specific_tasks: true
+special_config_hp_smart_array: false
+# additional_tasks:
+#   - 1.yml
+#   - 2.yml
+#   - 3.yml
+
+host_apt_sources_base_url: http://ossvault.open.ad.jp/vault/oss/19123101_ubuntu_1910_eoan_i386_amd64/
+
+do_not_add_admin_user: true
+do_not_delete_user1: true
+delete_user_ubuntu: true
+prepare_allow_ssh_password_auth: true
+

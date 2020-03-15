@@ -1,0 +1,1 @@
+ansible_ssh_host: "{{ prepare_temp_ssh_host }}"

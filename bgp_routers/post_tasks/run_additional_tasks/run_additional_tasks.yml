@@ -1,0 +1,11 @@
+- name: additional tasks loop
+  include: "{{ additional_task_item }}"
+  loop:
+    "{{ additional_tasks }}"
+  loop_control:
+    loop_var: additional_task_item
+  when: additional_task_item is defined
+
+
+
+

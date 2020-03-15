@@ -1,0 +1,23 @@
+ansible_ssh_host: "{{ running_ssh_host }}"
+
+domain_suffix: example.org
+syslog_server: 1.2.3.4
+resolv_conf_contents: |
+  domain example.org
+  nameserver 8.8.8.8
+  nameserver 8.8.4.4
+enable_ipv4_forward: false
+enable_ipv6_forward: false
+disable_ipv6_all: false
+network_boottime_1:
+network_boottime_2:
+network_static_routes:
+network_iptables_rules:
+disable_ntp: false
+disable_local_nic_ipif_after_lxd_install: false
+skip_common_linux: false
+skip_lxd_install: false
+ansible_become_pass: "{{ my_user_password }}"
+lxd_container_config_timeout: 60
+
+

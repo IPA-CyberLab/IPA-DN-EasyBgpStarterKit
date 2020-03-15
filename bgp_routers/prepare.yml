@@ -1,0 +1,22 @@
+# 最小限にインストールが完了した Ubuntu Linux サーバーに対して、最小限のネットワーク設定などを実施する。
+
+- name: prepare
+  become: true
+  hosts: preparing_servers
+  gather_facts: false
+
+  vars_files:
+    - ../secrets/secrets.yml
+    - ../IPA-DN-CommonAnsible_Private/private_common_vars.yml
+
+  pre_tasks:
+    - include_tasks: ../IPA-DN-CommonAnsible/tasks/common_linux/install_python.yml
+
+  roles:
+    - ../IPA-DN-CommonAnsible/roles/prepare_linux/
+
+  post_tasks:
+
+
+
+
