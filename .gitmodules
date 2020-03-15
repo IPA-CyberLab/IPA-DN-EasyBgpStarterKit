@@ -1,0 +1,3 @@
+[submodule "IPA-DN-CommonAnsible"]
+	path = IPA-DN-CommonAnsible
+	url = git@github.com:IPA-CyberLab/IPA-DN-CommonAnsible.git

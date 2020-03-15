@@ -1,0 +1,5 @@
+secrets/**/*
+!secrets/readme.md
+logs/**/*
+!logs/readme.md
+*.retry
