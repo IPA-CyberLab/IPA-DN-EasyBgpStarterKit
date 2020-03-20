@@ -1,6 +1,6 @@
 eth_settings: |
-  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:00:01", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
-  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:00:02", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:e0:4c:02:17:8b", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="dc:a6:32:46:6c:af", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
 ip_settings: |
   auto lo
   iface lo inet static
@@ -10,7 +10,7 @@ ip_settings: |
 
   auto ethmgmt
   iface ethmgmt inet static
-    address 10.21.33.1/16
+    address 10.253.33.1/16
     pre-up echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 || true
 ip_settings_prepare_tmp: |
   {{ ip_settings }}
@@ -71,7 +71,10 @@ special_config_hp_smart_array: false
 #   - 2.yml
 #   - 3.yml
 
-host_apt_sources_base_url: http://ossvault.open.ad.jp/vault/oss/19123101_ubuntu_1910_eoan_i386_amd64/
+### For Raspberry Pi hosts
+prepare_skip_add_grub_params: true
+snmp_temperature_script_name: files/scripts/se_snmp_temperature_raspi.sh
+host_apt_sources_base_url: http://ossvault.open.ad.jp/vault/oss/20031302_ubuntu_1910_eoan_armhf_arm64_ppc64el/
 
 do_not_add_admin_user: true
 do_not_delete_user1: true
