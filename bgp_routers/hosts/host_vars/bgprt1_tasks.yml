@@ -1,0 +1,79 @@
+## Additional tasks for mirror-sync
+
+- name: init ansible_flags directory
+  shell:
+    cmd: |
+      mkdir -p /etc/ansible_flags/ || true
+      chmod 777 /etc/ansible_flags/
+  changed_when: false
+
+- name: read ansible_flags
+  find:
+    paths: /etc/ansible_flags/
+  register:
+    ansible_flags
+
+
+#################
+- name: upload bird
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0666
+    backup: true
+  with_items:
+    - { src: "files/bird-2.0.7.tar.gz", dest: '/tmp/bird-2.0.7.tar.gz' }
+  vars:
+    ansible_flag_check_filename: "install_bird"
+  when:
+    ((ansible_flags | json_query("files[?path=='/etc/ansible_flags/" + ansible_flag_check_filename + "'].path") | length()) == 0)
+
+- name: install_bird
+  shell:
+    cmd: |
+      set -eu
+
+      cat <<\EOF > /etc/syslog-ng/conf.d/syslog_bird.conf
+      filter f_bird     { match('bird\['); };
+      log { source(s_src); filter(f_bird); destination(d_messages); };
+      EOF
+      systemctl restart syslog-ng.service
+
+      cd /root/
+      rm -fr /root/maketmp/bird/
+      mkdir -p /root/maketmp/bird/
+      cd /root/maketmp/bird/
+      cp /tmp/bird-2.0.7.tar.gz /root/maketmp/bird/bird-2.0.7.tar.gz
+      tar xzf bird-2.0.7.tar.gz
+      cd /root/maketmp/bird/bird-2.0.7/
+      ./configure
+      make
+      make install
+      cp -n /usr/local/etc/bird.conf /usr/local/etc/bird.conf.original
+
+      cat <<\EOF > /etc/se_run_bird.sh
+      #!/bin/bash
+      while true
+      do
+        /usr/local/sbin/bird -f
+        sleep 10
+      done
+      EOF
+      chmod 755 /etc/se_run_bird.sh
+
+      cat <<\EOF > /etc/se_optional_boot.sh
+      #!/bin/bash
+      # Start BIRD
+      nohup /etc/se_run_bird.sh > /dev/null 2>&1 &
+      EOF
+      chmod 755 /etc/se_optional_boot.sh
+
+      /etc/se_optional_boot.sh || true
+
+      touch "/etc/ansible_flags/{{ ansible_flag_check_filename }}"
+    executable: /bin/bash
+  vars:
+    ansible_flag_check_filename: "install_bird"
+  when:
+    ((ansible_flags | json_query("files[?path=='/etc/ansible_flags/" + ansible_flag_check_filename + "'].path") | length()) == 0)
+

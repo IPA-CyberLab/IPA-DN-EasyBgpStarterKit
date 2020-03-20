@@ -1,0 +1,18 @@
+# LXD 内の Linux ゲスト内で動作している BIRD への設定ファイルの書き込みとコミットを実施する
+
+- name: run
+  hosts: running_servers
+  become: true
+  
+  vars_files:
+    - ../IPA-DN-CommonAnsible_Private/private_common_vars.yml
+
+  pre_tasks:
+
+  roles:
+    - role: config_bird
+      when: (is_bird_running | default(false))
+ 
+      
+
+

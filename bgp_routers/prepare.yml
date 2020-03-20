@@ -6,7 +6,6 @@
   gather_facts: false
 
   vars_files:
-    - ../secrets/secrets.yml
     - ../IPA-DN-CommonAnsible_Private/private_common_vars.yml
 
   pre_tasks:

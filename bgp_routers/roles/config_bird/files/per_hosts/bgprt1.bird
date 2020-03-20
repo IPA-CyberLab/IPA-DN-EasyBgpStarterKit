@@ -1,0 +1,862 @@
+# bird.conf
+
+#########################################################
+###
+### 基本設定
+###
+#########################################################
+
+router id 103.143.136.1;
+
+log syslog { info, remote, warning, error, auth, fatal, bug };
+log stderr all;
+debug protocols {events, states, interfaces};
+graceful restart wait 15;
+
+
+
+#########################################################
+###
+### 定数
+###
+#########################################################
+
+# AS 番号
+define MY_AS = 63781;
+
+
+#########################################################
+###
+### マクロ
+###
+#########################################################
+
+function ipv4_is_private_routes()
+{
+    return net ~ [ 169.254.0.0/16+, 172.16.0.0/12+,
+                   192.168.0.0/16+, 10.0.0.0/8+,
+                   127.0.0.0/8+, 224.0.0.0/3+ ];
+}
+
+function ipv4_is_global_routes()
+{
+    return !ipv4_is_private_routes();
+}
+
+function ipv4_is_illegal_routes()
+{
+    return net ~ [ 169.254.0.0/16+, 172.16.0.0/12+,
+                   192.168.0.0/16+, 10.0.0.0/8+,
+                   127.0.0.0/8+, 224.0.0.0/3+, 0.0.0.0/0{0,7} ];
+}
+
+function ipv6_is_illegal_routes()
+{
+    return net ~ [ 3ffe::/16+, ::/8+, fe00::/8+, ::/128-, ::/0{0,15} ];
+}
+
+function bgp_is_ok_to_export()
+{
+    return (proto = "static_bgp_v4" || proto = "static_bgp_v6" || source = RTS_BGP);
+}
+
+function bgp_is_ospf_route()
+{
+    return (proto = "ospf_v4" || proto = "ospf_v6" || proto = "direct1");
+}
+
+
+#########################################################
+###
+### ルーティングテーブルオブジェクト
+###
+#########################################################
+
+ipv4 table k4; # kernel table (default)
+ipv4 table e4; # BGP table
+ipv4 table i4; # OSPF table
+
+ipv6 table k6; # kernel table (default)
+ipv6 table e6; # BGP table
+ipv6 table i6; # OSPF table
+
+
+#########################################################
+###
+### カーネルとの接続
+###
+#########################################################
+
+# デバイスの定義
+protocol device device1
+{
+    interface "-ethmgmt", "*";
+    
+    scan time 100;
+}
+
+# Direct connected ルーティングテーブルのインポート
+protocol direct direct1
+{
+    ipv4
+    {
+        table k4;
+    };
+    
+    ipv6
+    {
+        table k6;
+    };
+    
+    interface "-ethmgmt", "*";
+}
+
+# カーネルルーティングテーブルと接続 (IPv4)
+protocol kernel kernel_v4
+{
+    ipv4
+    {
+        table k4;
+        preference 10;
+        
+        import filter
+        {
+            reject;
+        };
+        export filter
+        {
+            if (ipv4_is_private_routes()) then reject;
+            accept;
+        };
+    };
+    
+    learn off;
+    scan time 10;
+    graceful restart on;
+    kernel table 254;
+}
+
+# カーネルルーティングテーブルと接続 (IPv6)
+protocol kernel kernel_v6
+{
+    ipv6
+    {
+        table k6;
+        preference 10;
+        
+        import filter
+        {
+            reject;
+        };
+        export filter
+        {
+            accept;
+        };
+    };
+    
+    learn off;
+    scan time 10;
+    graceful restart on;
+    kernel table 254;
+}
+
+
+#########################################################
+###
+### Static ルーティングテーブル手動定義
+###
+#########################################################
+
+# Static ルーティングテーブルの定義 (IPv4) (OSPF 目的だけでなく、実カーネルにも適用される)
+protocol static static_all_v4
+{
+    ipv4
+    {
+        table k4;
+        preference 200;
+        
+        import filter
+        {
+            # Static ルートは k4 テーブルに挿入されます
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    ## static ルーティングテーブルの定義
+    # ピンポン防止
+}
+
+# Static ルーティングテーブルの定義 (IPv6) (OSPF 目的だけでなく、実カーネルにも適用される)
+protocol static static_all_v6
+{
+    ipv6
+    {
+        table k6;
+        preference 200;
+        
+        import filter
+        {
+            # Static ルートは k6 テーブルに挿入されます
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    ## static ルーティングテーブルの定義
+    # ピンポン防止
+}
+
+
+#########################################################
+###
+### BGP ルート生成
+###
+#########################################################
+
+# BGP ルーティングテーブルの定義 - ルートの生成 (IPv4) (BGP アドバタイズ専用)
+protocol static static_bgp_v4
+{
+    ipv4
+    {
+        table e4;
+        preference 400;
+        
+        import filter
+        {
+            # BGP 生成ルートは e4 テーブルに挿入されます
+            # 生成したルートにはコミュニティ番号 1 番のフラグを付けます
+            bgp_community.add((MY_AS, 1));
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    ## 生成するルートを以下に列挙
+    route 103.143.136.0/24 blackhole;
+    route 103.143.137.0/24 blackhole;
+}
+
+# BGP ルーティングテーブルの定義 - ルートの生成 (IPv6) (BGP アドバタイズ専用)
+protocol static static_bgp_v6
+{
+    ipv6
+    {
+        table e6;
+        preference 400;
+        
+        import filter
+        {
+            # BGP 生成ルートは e6 テーブルに挿入されます
+            # 生成したルートにはコミュニティ番号 1 番のフラグを付けます
+            bgp_community.add((MY_AS, 1));
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    ## 生成するルートを以下に列挙
+    route 2405:5340::/32 blackhole;
+}
+
+
+#########################################################
+###
+### OSPF ルート生成
+###
+#########################################################
+
+# OSPF ルーティングテーブルの定義 - ルートの生成 (IPv4) (OSPF アドバタイズ専用)
+protocol static static_ospf_v4
+{
+    ipv4
+    {
+        table i4;
+        preference 200;
+        
+        import filter
+        {
+            # OSPF 生成ルートは i4 テーブルに挿入されます
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    ## 生成するルート (デフォルトルートなど) を以下に列挙
+    route 0.0.0.0/0 blackhole;
+}
+
+# OSPF ルーティングテーブルの定義 - ルートの生成 (IPv4) (OSPF アドバタイズ専用)
+protocol static static_ospf_v6
+{
+    ipv6
+    {
+        table i6;
+        preference 200;
+        
+        import filter
+        {
+            # OSPF 生成ルートは i6 テーブルに挿入されます
+            accept;
+        };
+        export filter
+        {
+            # 読み取り専用なので原理的に Reject しかあり得ません
+            reject;
+        };
+    };
+    
+    
+    ## 生成するルート (デフォルトルートなど) を以下に列挙
+    route ::/0 blackhole;
+}
+
+
+
+#########################################################
+###
+### OSPF プロトコル設定
+###
+#########################################################
+
+# OSPF (IPv4)
+protocol ospf v2 ospf_v4
+{
+    rfc1583compat on;
+    stub router off;
+    tick 1;
+    ecmp off;
+
+    ipv4
+    {
+        table i4;
+        preference 150;
+        
+        import filter
+        {
+            if (ipv4_is_private_routes()) then reject;
+            accept;
+        };
+        export filter
+        {
+            if (ipv4_is_private_routes()) then reject;
+            accept;
+        };
+    };
+
+    area 0.0.0.0
+    {
+        # すべての Stub 間接ルートをここに列挙します。
+        # 例: stubnet 1.2.3.4/32;
+
+        ## OSPF プロトコルを許可するインターフェイスの定義 (信頼されたインターフェイスのみ)
+        interface "vlan_ibgp"
+        {
+            hello 1;
+            poll 1;
+            retransmit 2;
+            dead 5;
+            wait 5;
+            stub off;
+            cost 100;
+            type broadcast;
+            authentication none;
+        };
+
+        interface "vlan_ospf1"
+        {
+            hello 1;
+            poll 1;
+            retransmit 2;
+            dead 5;
+            wait 5;
+            stub off;
+            cost 100;
+            type broadcast;
+            authentication none;
+        };
+
+        ## OSPF プロトコルを許可しない Stub インターフェイスの定義 (信頼されていないユーザーネットワークなど)
+        interface "vlan_ebgp"
+        {
+            stub on;
+            type broadcast;
+        };
+
+        ## ループバックインターフェイス
+        interface "lo"
+        {
+            stub on;
+            type ptmp;
+        };
+    };
+}
+
+
+
+# OSPF (IPv6)
+protocol ospf v3 ospf_v6
+{
+    rfc1583compat on;
+    stub router off;
+    tick 1;
+    ecmp off;
+
+    ipv6
+    {
+        table i6;
+        preference 150;
+        
+        import filter
+        {
+            accept;
+        };
+        export filter
+        {
+            accept;
+        };
+    };
+
+    area 0.0.0.0
+    {
+        # すべての Stub 間接ルートをここに列挙します。
+        # 例: stubnet 2000:1234::/32;
+
+        ## OSPF プロトコルを許可するインターフェイスの定義 (信頼されたインターフェイスのみ)
+        interface "vlan_ibgp"
+        {
+            hello 1;
+            poll 1;
+            retransmit 2;
+            dead 5;
+            wait 5;
+            stub off;
+            cost 100;
+            type broadcast;
+            authentication none;
+        };
+
+        interface "vlan_ospf1"
+        {
+            hello 1;
+            poll 1;
+            retransmit 2;
+            dead 5;
+            wait 5;
+            stub off;
+            cost 100;
+            type broadcast;
+            authentication none;
+        };
+
+        ## OSPF プロトコルを許可しない Stub インターフェイスの定義 (信頼されていないユーザーネットワークなど)
+        interface "vlan_ebgp"
+        {
+            stub on;
+            type broadcast;
+        };
+
+        ## ループバックインターフェイス
+        interface "lo"
+        {
+            stub on;
+            type ptmp;
+        };
+    };
+}
+
+
+#########################################################
+###
+### iBGP 設定
+###
+#########################################################
+
+
+# iBGP 接続先 - bgprt2 (IPv4)
+protocol bgp bgprt2_v4
+{
+    local 103.143.136.1 as MY_AS;
+    neighbor 103.143.136.2 as MY_AS;
+    password "ibgpneko1";
+    hold time 90;
+    startup hold time 90;
+    keepalive time 30;
+    connect retry time 5;
+    connect delay time 5;
+    error wait time 30, 30;
+    error forget time 30;
+    default bgp_local_pref 100;
+    
+    ipv4
+    {
+        table e4;
+        preference 100;
+
+        next hop self;
+        igp table k4;
+        
+        import filter
+        {
+            # iBGP から受け取ったルートは信頼しそのままインポートする
+            accept;
+        };
+        export filter
+        {
+            # OSPF のルートは BGP にエクスポートいたしません
+            if (bgp_is_ospf_route()) then
+            {
+                reject;
+            }
+            # BGP で流すのに相応しくないルートは BGP に流しません
+            if (!bgp_is_ok_to_export()) then
+            {
+                reject;
+            }
+            accept;
+        };
+    };
+}
+
+# iBGP 接続先 - bgprt2 (IPv6)
+protocol bgp bgprt2_v6
+{
+    local 2405:5340:FFFF::1 as MY_AS;
+    neighbor 2405:5340:FFFF::2 as MY_AS;
+    password "ibgpneko1";
+    hold time 90;
+    startup hold time 90;
+    keepalive time 30;
+    connect retry time 5;
+    connect delay time 5;
+    error wait time 30, 30;
+    error forget time 30;
+    default bgp_local_pref 100;
+    
+    ipv6
+    {
+        table e6;
+        preference 100;
+
+        next hop self;
+        igp table k6;
+        
+        import filter
+        {
+            # iBGP から受け取ったルートは信頼しそのままインポートする
+            accept;
+        };
+        export filter
+        {
+            # OSPF のルートは BGP にエクスポートいたしません
+            if (bgp_is_ospf_route()) then
+            {
+                reject;
+            }
+            # BGP で流すのに相応しくないルートは BGP に流しません
+            if (!bgp_is_ok_to_export()) then
+            {
+                reject;
+            }
+            accept;
+        };
+    };
+}
+
+
+
+
+#########################################################
+###
+### eBGP 設定
+###
+#########################################################
+
+# eBGP 接続先 - 上流 ISP の BGP ルータ #1 (IPv4)
+protocol bgp isp1_v4
+{
+    local 103.41.60.171 as MY_AS;
+    neighbor 103.41.60.164 as 59103;
+    password "microsoft";
+    hold time 30;
+    startup hold time 30;
+    keepalive time 10;
+    connect retry time 5;
+    connect delay time 5;
+    error wait time 30, 30;
+    error forget time 30;
+    default bgp_local_pref 100;
+    
+    ipv4
+    {
+        table e4;
+        preference 100;
+        
+        import filter
+        {
+            if (ipv4_is_illegal_routes()) then
+            {
+                # 不正なルートは通しません
+                reject;
+            }
+
+            # ISP から受け取ったルートは e4 テーブルに挿入されます
+            bgp_local_pref = 200;
+            
+            accept;
+        };
+        export filter
+        {
+            # OSPF ルートは上流に流しません
+            if (bgp_is_ospf_route()) then
+            {
+                reject;
+            }
+            # BGP で流すのに相応しくないルートは上流に流しません
+            if (!bgp_is_ok_to_export()) then
+            {
+                reject;
+            }
+            # /24 より細かい経路は流しません
+            if (net ~ [0.0.0.0/0{25,32}]) then
+            {
+                reject;
+            }
+            # MED 値の制御をいたします (任意)
+            bgp_med = 200;
+
+            accept;
+        };
+    };
+}
+
+# eBGP 接続先 - 上流 ISP の BGP ルータ #1 (IPv6)
+protocol bgp isp1_v6
+{
+    local 2401:AF80:2917::B as MY_AS;
+    neighbor 2401:AF80:2917::4 as 59103;
+    password "microsoft";
+    hold time 30;
+    startup hold time 30;
+    keepalive time 10;
+    connect retry time 5;
+    connect delay time 5;
+    error wait time 30, 30;
+    error forget time 30;
+    default bgp_local_pref 100;
+    
+    ipv6
+    {
+        table e6;
+        preference 100;
+        
+        import filter
+        {
+            if (ipv6_is_illegal_routes()) then
+            {
+                # 不正なルートは通しません
+                reject;
+            }
+
+            # ISP から受け取ったルートは e4 テーブルに挿入されます
+            bgp_local_pref = 200;
+            
+            accept;
+        };
+        export filter
+        {
+            # OSPF ルートは上流に流しません
+            if (bgp_is_ospf_route()) then
+            {
+                reject;
+            }
+            # BGP で流すのに相応しくないルートは上流に流しません
+            if (!bgp_is_ok_to_export()) then
+            {
+                reject;
+            }
+            # /64 より細かい経路は流しません
+            if (net ~ [::/0{65,128}]) then
+            {
+                reject;
+            }
+            # MED 値の制御をいたします (任意)
+            bgp_med = 200;
+
+            accept;
+        };
+    };
+}
+
+
+#########################################################
+###
+### テーブル間接続パイプ設定
+###
+#########################################################
+
+# OSPF で受信したルーティングテーブル (e4) を カーネル (k4) に挿入するための接続パイプ (IPv4)
+protocol pipe pipe_kernel_to_ospf_v4
+{
+    table i4;
+    peer table k4;
+    
+    # カーネル -> OSPF 方向は BGP で取得した経路以外をインポートします
+    import filter
+    {
+        if (source = RTS_BGP) then
+        {
+            reject;
+        }
+        accept;
+    };
+    
+    # OSPF -> カーネル方向は OSPF Only 以外を通過させます
+    export filter
+    {
+        if (proto = "static_ospf_v4") then
+        {
+            reject;
+        }
+        # デフォルトルートは除外 (ピンポン防止)
+        if (net = 0.0.0.0/0) then
+        {
+            reject;
+        }
+        accept;
+    };
+}
+
+# OSPF で受信したルーティングテーブル (e6) を カーネル (k6) に挿入するための接続パイプ (IPv6)
+protocol pipe pipe_kernel_to_ospf_v6
+{
+    table i6;
+    peer table k6;
+    
+    # カーネル -> OSPF 方向は BGP で取得した経路以外をインポートします
+    import filter
+    {
+        if (source = RTS_BGP) then
+        {
+            reject;
+        }
+        accept;
+    };
+    
+    # OSPF -> カーネル方向は OSPF Only 以外を通過させます
+    export filter
+    {
+        if (proto = "static_ospf_v6") then
+        {
+            reject;
+        }
+        # デフォルトルートは除外 (ピンポン防止)
+        if (net = ::/0) then
+        {
+            reject;
+        }
+        accept;
+    };
+}
+
+# BGP で受信したルーティングテーブル (e4) を カーネル (k4) に挿入するための接続パイプ (IPv4)
+protocol pipe pipe_bgp_to_kernel_v4
+{
+    table e4;
+    peer table k4;
+    
+    # カーネル -> BGP 方向はすべて遮断します
+    import filter
+    {
+        reject;
+    };
+    
+    # BGP -> カーネル方向は基本的に通過させます
+    export filter
+    {
+        if (proto = "static_bgp_v4") then
+        {
+            # 自分自身が生成しているルートは通しません
+            reject;
+        }
+        if (ipv4_is_illegal_routes()) then
+        {
+            # 不正なルートは通しません
+            reject;
+        }
+        # コミュニティ番号 1 番が付いているルート (同じ AS 内の他 BGP ルータが生成したルート) は通しません
+        if (bgp_path.len = 0) then
+        {
+            if (proto != "static_bgp_v4") then
+            {
+                if (MY_AS, 1) ~ bgp_community then
+                {
+                    reject;
+                }
+            }
+        }
+        accept;
+    };
+}
+
+# BGP で受信したルーティングテーブル (e6) を カーネル (k6) に挿入するための接続パイプ (IPv6)
+protocol pipe pipe_bgp_to_kernel_v6
+{
+    table e6;
+    peer table k6;
+    
+    # カーネル -> BGP 方向はすべて遮断します
+    import filter
+    {
+        reject;
+    };
+    
+    # BGP -> カーネル方向は基本的に通過させます
+    export filter
+    {
+        if (proto = "static_bgp_v6") then
+        {
+            # 自分自身が生成しているルートは通しません
+            reject;
+        }
+        if (ipv6_is_illegal_routes()) then
+        {
+            # 不正なルートは通しません
+            reject;
+        }
+        # コミュニティ番号 1 番が付いているルート (同じ AS 内の他 BGP ルータが生成したルート) は通しません
+        if (bgp_path.len = 0) then
+        {
+            if (proto != "static_bgp_v6") then
+            {
+                if (MY_AS, 1) ~ bgp_community then
+                {
+                    reject;
+                }
+            }
+        }
+        accept;
+    };
+}
+
+

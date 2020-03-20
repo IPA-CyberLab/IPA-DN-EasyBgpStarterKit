@@ -1,7 +1,7 @@
 ## 注意! この変数は最後に上書きされるため優先順位が高い
 
 # 基本変数
-common_domain_suffix_default: "mg.open.ad.jp"
+common_domain_suffix_default: "example.org"
 common_resolv_conf_contents_default: |
   nameserver 8.8.8.8
   nameserver 8.8.4.4

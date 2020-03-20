@@ -1,0 +1,10 @@
+{
+    "files.eol": "\n",
+    "files.associations": {
+        "*.bird": "csharp"
+    },
+    "[csharp]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+}

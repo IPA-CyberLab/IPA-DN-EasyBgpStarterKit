@@ -17,7 +17,7 @@ disable_ntp: false
 disable_local_nic_ipif_after_lxd_install: false
 skip_common_linux: false
 skip_lxd_install: false
-ansible_become_pass: "{{ my_user_password }}"
+#ansible_become_pass: "{{ my_user_password }}"
 lxd_container_config_timeout: 60
 
 

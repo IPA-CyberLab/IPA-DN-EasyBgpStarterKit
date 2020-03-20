@@ -1,0 +1,40 @@
+- name: upload BIRD per-host configuration file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0666
+    backup: true
+  with_items:
+    - { src: "files/per_hosts/{{ inventory_hostname_short }}.bird", dest: '/usr/local/etc/bird_pre.conf' }
+  register: bird_pre_config_updated
+
+- name: checking pre BIRD configuration file syntax
+  shell:
+    cmd: |
+      set -eu
+      /usr/local/sbin/bird -p -c /usr/local/etc/bird_pre.conf
+    executable: /bin/bash
+  changed_when:
+    false
+    
+- name: copy BIRD configuration file to the running BIRD system
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: yes
+    backup: true
+  with_items:
+    - { src: '/usr/local/etc/bird_pre.conf', dest: '/usr/local/etc/bird.conf' }
+  register:
+    bird_running_config_updated
+
+- name: reconfigure BIRD
+  shell:
+    cmd: |
+      set -eu
+      /usr/local/sbin/bird -p -c /usr/local/etc/bird.conf
+      /usr/local/sbin/birdc configure
+    executable: /bin/bash
+  when:
+    bird_running_config_updated.changed
+

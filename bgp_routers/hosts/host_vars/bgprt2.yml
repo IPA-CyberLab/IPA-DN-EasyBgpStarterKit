@@ -1,16 +1,16 @@
 eth_settings: |
-  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:00:01", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
-  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:00:02", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:01:01", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
+  SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:20:03:20:01:02", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
 ip_settings: |
   auto lo
   iface lo inet static
-    address 103.143.136.1/32
+    address 103.143.136.2/32
   iface lo inet6 static
-    address 2405:5340:FFFF::1/128
+    address 2405:5340:FFFF::2/128
 
   auto ethmgmt
   iface ethmgmt inet static
-    address 10.21.33.1/16
+    address 10.21.33.2/16
     pre-up echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 || true
 ip_settings_prepare_tmp: |
   {{ ip_settings }}
@@ -31,22 +31,22 @@ network_boottime_2: |
   ip link set vlan_ebgp up
   sysctl -w net.ipv4.conf.vlan_ebgp.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ebgp.accept_redirects=0
-  ip -4 address add 103.41.60.171/27 broadcast + dev vlan_ebgp
-  ip -6 address add 2401:af80:2917::b/64 dev vlan_ebgp
+  ip -4 address add 103.41.60.172/27 broadcast + dev vlan_ebgp
+  ip -6 address add 2401:af80:2917::c/64 dev vlan_ebgp
 
   ip link add link ethvlan name vlan_ibgp type vlan protoco 802.1Q id 2021
   ip link set vlan_ibgp up
   sysctl -w net.ipv4.conf.vlan_ibgp.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ibgp.accept_redirects=0
-  ip -4 address add 103.143.136.17/29 broadcast + dev vlan_ibgp
-  ip -6 address add 2405:5340:BB:1::1/64 dev vlan_ibgp
+  ip -4 address add 103.143.136.18/29 broadcast + dev vlan_ibgp
+  ip -6 address add 2405:5340:BB:2::1/64 dev vlan_ibgp
 
-  ip link add link ethvlan name vlan_ospf1 type vlan protoco 802.1Q id 2022
+  ip link add link ethvlan name vlan_ospf1 type vlan protoco 802.1Q id 2023
   ip link set vlan_ospf1 up
   sysctl -w net.ipv4.conf.vlan_ospf1.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ospf1.accept_redirects=0
-  ip -4 address add 103.143.136.25/30 broadcast + dev vlan_ospf1
-  ip -6 address add 2405:5340:BB:2::1/64 dev vlan_ospf1
+  ip -4 address add 103.143.136.29/30 broadcast + dev vlan_ospf1
+  ip -6 address add 2405:5340:BB:3::2/64 dev vlan_ospf1
 network_static_routes: |
   # none
 network_iptables_rules: |
