@@ -5,9 +5,11 @@ IPA Easy BGP Starter Kit は、Raspberry Pi 4 を用いて 2 台の完全冗長�
 本ツールキットを利用すれば、JPNIC や上流 ISP にうまいこと言ってもらってきた AS 番号、IP アドレスおよび BGP 接続用ポートを活用して、あなたのシステムをインターネットに直接接続し、何百個もの IPv4 アドレスや IPv6 ネットワーク・セグメントに、数え切れない多数のサーバー・コンピュータやワークステーションを接続して、ファイアウォールや NAT などの厄介な添加物なしに、自然なインターネットとの触れ合いを楽しむことができるのです。
 
 
+## 偉大なる 目次さん!
 <!-- TOC -->
 
 - [IPA Easy BGP Starter Kit へようこそ](#ipa-easy-bgp-starter-kit-%E3%81%B8%E3%82%88%E3%81%86%E3%81%93%E3%81%9D)
+    - [偉大なる 目次さん!](#%E5%81%89%E5%A4%A7%E3%81%AA%E3%82%8B-%E7%9B%AE%E6%AC%A1%E3%81%95%E3%82%93)
     - [IPA Easy BGP Starter Kit について](#ipa-easy-bgp-starter-kit-%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6)
     - [従来の課題](#%E5%BE%93%E6%9D%A5%E3%81%AE%E8%AA%B2%E9%A1%8C)
     - [IPA Easy BGP Starter Kit による解決方法](#ipa-easy-bgp-starter-kit-%E3%81%AB%E3%82%88%E3%82%8B%E8%A7%A3%E6%B1%BA%E6%96%B9%E6%B3%95)
@@ -44,7 +46,7 @@ IPA Easy BGP Starter Kit は、Raspberry Pi 4 を用いて 2 台の完全冗長�
 <!-- /TOC -->
 
 ## IPA Easy BGP Starter Kit について
-- この IPA Easy BGP Starter Kit は、[登 大遊](http://dnobori.cs.tsukuba.ac.jp/) が作成しました。
+- この IPA Easy BGP Starter Kit は、[登](https://github.com/dnobori) が作成いたしました。
 - 2014 年ごろに AS 番号, IP アドレスを取得して BGP を始めようとしたときに、当時としては比較的先進的な手法である Network Functions Virtualization (NFV) を、汎用の VM と Linux および BGP ルーティングデーモンを用いて実現しようとしました。<BR>BGP ルーティングデーモンは [BIRD] (https://bird.network.cz/) を利用し、ルーティング処理は Linux カーネルを利用しようとしました。<BR>ところが、当時はインターネット上の文献が乏しく、どこから着手すれば良いか全くわからず色々と調べて試行錯誤するなど、苦労が伴いました。
 - それから 6 年間が経過した今は、なんと Raspberry Pi 4 として、高速な ARM 型 CPU ボードが、メモリ 4GB を搭載して 1 万円前後で入手可能となりました。そこで、Raspberry Pi 4 上に Linux で BGP フルルートルータを構築してみたところ、かなり安定して動作しましたので、これは大変実用的であると思いました。
 - 当初 Linux と BIRD を組み合わせて BGP フルルートルータを構築する際は、秘伝のメモ書きを作成し、それをコピペして構築していました。
@@ -54,6 +56,7 @@ IPA Easy BGP Starter Kit は、Raspberry Pi 4 を用いて 2 台の完全冗長�
 - 「AS 番号と IP アドレスを取得したが、BGP のやり方が皆目分からないから教えてくれ」という方は、誰でも、この Ansible スクリプト集の AS 番号の部分と IP アドレスの部分を、ご自分で取得された AS 番号と IP アドレスに適切に置換するだけで、BGP ルータを構築することができるはずです。
 - 「IPA Easy BGP Starter Kit」の「IPA」とは、*Internet Protocol Applications* の略とされています。
 - 本 Easy BGP Starter Kit は無償・無保証で提供されるものであり、製作者等は一切の責任を負いません。セキュリティや品質などの一切の保証はありません。ユーザーの各自の責任で使用してください。
+- 間違いが色々あると思いますので、発見されましたら Pull Request で修正をお送りください。
 
 
 ## 従来の課題
