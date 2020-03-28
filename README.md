@@ -318,6 +318,9 @@ https://ossvault.open.ad.jp/vault/pub/dn/200313_ub1910_pi4_prepared/200313_ub191
 ```
 
 
+microSD のイメージは、別に上記の `200313_ub1910_pi4_prepared.img` でなくても、Ubuntu 19.10 の Raspberry Pi 用のイメージでもよいのですが、最初の設定が少し面倒なことと、多くの環境で HDMI 接続した画面が映らないというバグが報告されているため、これらの部分を修正して楽にした上記のイメージを利用します。しかしながら、気持ち悪いなと言って気になる方は、クリーンな Ubuntu 19.10 の Raspberry Pi 用のイメージを利用していただいてもだいたい動作すると思います。
+
+
 ## Raspberry Pi 4 への周辺機器の接続と起動 (bgprt1, bgprt2 用にそれぞれ実行)
 Raspberry Pi 4 に、下記のとおり周辺機器を接続します。
 
