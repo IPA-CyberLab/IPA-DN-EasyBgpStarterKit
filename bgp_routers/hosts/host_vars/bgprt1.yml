@@ -1,6 +1,23 @@
+# IPA Easy BGP Starter Kit
+# Copyright (c) 2014-2019 Daiyuu Nobori
+# Copyright (c) 2020 IPA CyberLab
+# All rights reserved.
+# 
+# 本 Easy BGP Starter Kit は無償・無保証で提供されるものであり、製作者等は一切の責任を負わない。
+# セキュリティや品質などの一切の保証はない。
+# ユーザーの各自の責任で使用すること。
+
+# 本ファイルの説明:
+# bgprt1 (BGP ルータ #1) の Ansible 設定ファイルである。
+
+# TODO: Raspberry Pi の物理 LAN ポートの設定。
+# 1 行目は、増設された USB-NIC の MAC アドレスに置換すること。
+# 2 行目は、オンボードの NIC の MAC アドレスに置換すること。
 eth_settings: |
   SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:e0:4c:02:17:8b", ATTR{type}=="1", KERNEL=="eth*", NAME="ethmgmt"
   SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="dc:a6:32:46:6c:af", ATTR{type}=="1", KERNEL=="eth*", NAME="ethvlan"
+
+# TODO: lo の値を、bgprt1 に付与するグローバル IPv4 / IPv6 のループバックアドレスに置換すること
 ip_settings: |
   auto lo
   iface lo inet static
@@ -12,12 +29,18 @@ ip_settings: |
   iface ethmgmt inet static
     address 10.253.33.1/16
     pre-up echo 1 > /proc/sys/net/ipv6/conf/$IFACE/disable_ipv6 || true
+
 ip_settings_prepare_tmp: |
   {{ ip_settings }}
 lxd_bridge_ageing_time: 30000  # On VMware ESXi, set 0. Else, set 30000.
+
 network_boottime_1: |
   nic_disable_offload ethmgmt
   nic_disable_offload ethvlan
+
+# TODO: vlan_ebgp の IPv4 / IPv6 アドレスを、bgprt1 が上流 ISP と接続する際のグローバル IPv4 / IPv6 アドレスに置換すること。
+# TODO: vlan_ibgp の IPv4 / IPv6 アドレスを、bgprt1 が bgprt2 との間の iBGP 接続を行なう際のグローバル IPv4 / IPv6 アドレスに置換すること。
+# TODO: vlan_ospf1 の IPv4 / IPv6 アドレスを、bgprt1 が ospfrt1 との間の OSPF 接続を行なう際のグローバル IPv4 / IPv6 アドレスに置換すること。
 network_boottime_2: |
   #### pyhsical nic
   sysctl -w net.ipv4.conf.all.send_redirects=0
@@ -27,21 +50,21 @@ network_boottime_2: |
   ip link set ethvlan up
   sysctl -w net.ipv6.conf.ethvlan.disable_ipv6=1
 
-  ip link add link ethvlan name vlan_ebgp type vlan protoco 802.1Q id 2917
+  ip link add link ethvlan name vlan_ebgp type vlan protoco 802.1Q id 17
   ip link set vlan_ebgp up
   sysctl -w net.ipv4.conf.vlan_ebgp.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ebgp.accept_redirects=0
   ip -4 address add 103.41.60.171/27 broadcast + dev vlan_ebgp
   ip -6 address add 2401:af80:2917::b/64 dev vlan_ebgp
 
-  ip link add link ethvlan name vlan_ibgp type vlan protoco 802.1Q id 2021
+  ip link add link ethvlan name vlan_ibgp type vlan protoco 802.1Q id 21
   ip link set vlan_ibgp up
   sysctl -w net.ipv4.conf.vlan_ibgp.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ibgp.accept_redirects=0
   ip -4 address add 103.143.136.17/29 broadcast + dev vlan_ibgp
   ip -6 address add 2405:5340:BB:1::1/64 dev vlan_ibgp
 
-  ip link add link ethvlan name vlan_ospf1 type vlan protoco 802.1Q id 2022
+  ip link add link ethvlan name vlan_ospf1 type vlan protoco 802.1Q id 22
   ip link set vlan_ospf1 up
   sysctl -w net.ipv4.conf.vlan_ospf1.send_redirects=0
   sysctl -w net.ipv4.conf.vlan_ospf1.accept_redirects=0

@@ -1,4 +1,15 @@
-# bird.conf
+# IPA Easy BGP Starter Kit
+# Copyright (c) 2014-2019 Daiyuu Nobori
+# Copyright (c) 2020 IPA CyberLab
+# All rights reserved.
+# 
+# 本 Easy BGP Starter Kit は無償・無保証で提供されるものであり、製作者等は一切の責任を負わない。
+# セキュリティや品質などの一切の保証はない。
+# ユーザーの各自の責任で使用すること。
+
+# 本ファイルの説明:
+# bgprt1 (BGP ルータ #1) の BIRD (BGP, OSPF ルーティングデーモン) の設定ファイルである。
+
 
 #########################################################
 ###
@@ -6,6 +17,7 @@
 ###
 #########################################################
 
+# TODO: bgprt1 の Lookback アドレス (IPv4) をルータ ID とするため、ここを置換すること。
 router id 103.143.136.1;
 
 log syslog { info, remote, warning, error, auth, fatal, bug };
@@ -21,7 +33,7 @@ graceful restart wait 15;
 ###
 #########################################################
 
-# AS 番号
+# TODO: 自組織の AS 番号に置換すること。
 define MY_AS = 63781;
 
 
@@ -188,7 +200,6 @@ protocol static static_all_v4
     };
     
     ## static ルーティングテーブルの定義
-    # ピンポン防止
 }
 
 # Static ルーティングテーブルの定義 (IPv6) (OSPF 目的だけでなく、実カーネルにも適用される)
@@ -244,7 +255,9 @@ protocol static static_bgp_v4
         };
     };
     
-    ## 生成するルートを以下に列挙
+    ## TODO: 生成するルートを以下に列挙
+    ## ※ 以下に記載されている 2 つの /24 を削除し、自分の AS がインターネットに広報する
+    ##    IPv4 アドレスのリストを元の例に倣って記載すること。
     route 103.143.136.0/24 blackhole;
     route 103.143.137.0/24 blackhole;
 }
@@ -271,7 +284,9 @@ protocol static static_bgp_v6
         };
     };
     
-    ## 生成するルートを以下に列挙
+    ## TODO: 生成するルートを以下に列挙
+    ## ※ 以下に記載されている 2 つの /24 を削除し、自分の AS がインターネットに広報する
+    ##    IPv6 アドレスのリストを元の例に倣って記載すること。
     route 2405:5340::/32 blackhole;
 }
 
@@ -496,8 +511,13 @@ protocol ospf v3 ospf_v6
 # iBGP 接続先 - bgprt2 (IPv4)
 protocol bgp bgprt2_v4
 {
+    # TODO: bgprt1 の VLAN 21 上における IPv4 アドレスをに書換えること。
     local 103.143.136.1 as MY_AS;
+
+    # TODO: bgprt2 の VLAN 21 上における IPv4 アドレスをに書換えること。
     neighbor 103.143.136.2 as MY_AS;
+
+    # TODO: iBGP 接続を行なう際のパスフレーズを自由に設定すること (対向でも同じものを設定する必要がある)
     password "ibgpneko1";
     hold time 90;
     startup hold time 90;
@@ -541,8 +561,13 @@ protocol bgp bgprt2_v4
 # iBGP 接続先 - bgprt2 (IPv6)
 protocol bgp bgprt2_v6
 {
+    # TODO: bgprt1 の VLAN 21 上における IPv6 アドレスをに書換えること。
     local 2405:5340:FFFF::1 as MY_AS;
+
+    # TODO: bgprt2 の VLAN 21 上における IPv6 アドレスをに書換えること。
     neighbor 2405:5340:FFFF::2 as MY_AS;
+
+    # TODO: iBGP 接続を行なう際のパスフレーズを自由に設定すること (対向でも同じものを設定する必要がある)
     password "ibgpneko1";
     hold time 90;
     startup hold time 90;
@@ -595,9 +620,18 @@ protocol bgp bgprt2_v6
 # eBGP 接続先 - 上流 ISP の BGP ルータ #1 (IPv4)
 protocol bgp isp1_v4
 {
+    # TODO: 上流 ISP #1 と合意した、
+    #       bgprt1 の ISP 接続セグメント (VLAN 17) 上における IPv4 アドレスをに書換えること。
     local 103.41.60.171 as MY_AS;
+
+    # TODO: 上流 ISP #1 と合意した、
+    #       上流 ISP 側 BGP ルータの ISP 接続セグメント (VLAN 17) 上における IPv4 アドレスをに書換えること。
     neighbor 103.41.60.164 as 59103;
+
+    # TODO: 上流 ISP #1 と合意した、BGP パスフレーズに書換えること。
     password "microsoft";
+
+    # TODO: BGP 接続パラメータ (タイマの値) である。上流 ISP #1 と合意した値に変更すること。
     hold time 30;
     startup hold time 30;
     keepalive time 10;
@@ -653,9 +687,18 @@ protocol bgp isp1_v4
 # eBGP 接続先 - 上流 ISP の BGP ルータ #1 (IPv6)
 protocol bgp isp1_v6
 {
+    # TODO: 上流 ISP #1 と合意した、
+    #       bgprt1 の ISP 接続セグメント (VLAN 17) 上における IPv6 アドレスをに書換えること。
     local 2401:AF80:2917::B as MY_AS;
+
+    # TODO: 上流 ISP #1 と合意した、
+    #       上流 ISP 側 BGP ルータの ISP 接続セグメント (VLAN 17) 上における IPv6 アドレスをに書換えること。
     neighbor 2401:AF80:2917::4 as 59103;
+
+    # TODO: 上流 ISP #1 と合意した、BGP パスフレーズに書換えること。
     password "microsoft";
+
+    # TODO: BGP 接続パラメータ (タイマの値) である。上流 ISP #1 と合意した値に変更すること。
     hold time 30;
     startup hold time 30;
     keepalive time 10;

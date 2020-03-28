@@ -1,7 +1,18 @@
+# IPA Easy BGP Starter Kit
+# Copyright (c) 2014-2019 Daiyuu Nobori
+# Copyright (c) 2020 IPA CyberLab
+# All rights reserved.
+# 
+# 本 Easy BGP Starter Kit は無償・無保証で提供されるものであり、製作者等は一切の責任を負わない。
+# セキュリティや品質などの一切の保証はない。
+# ユーザーの各自の責任で使用すること。
+
+# 本ファイルの説明:
+# 共通設定ファイルである。
+
 ansible_ssh_host: "{{ running_ssh_host }}"
 
 domain_suffix: example.org
-syslog_server: 1.2.3.4
 resolv_conf_contents: |
   domain example.org
   nameserver 8.8.8.8
@@ -21,3 +32,6 @@ skip_lxd_install: false
 lxd_container_config_timeout: 60
 
 
+# TODO: syslog を送付する場合は、syslog サーバーの IPv4 アドレスに置換すること。
+# syslog サーバーは、MGMT セグメント内にあっても、グローバル IPv4 アドレスであっても良いのである。
+syslog_server: 1.2.3.4
